@@ -1,89 +1,65 @@
 import { useState } from 'react'
 import css from './App.module.css'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchNotes, createNote, deleteNote } from '../../services/noteService'
-import type { CreateNoteParams } from '../../services/noteService'
+import { useQuery } from '@tanstack/react-query'
+import { fetchNotes } from '../../services/noteService'
 import { useDebouncedCallback } from 'use-debounce';
+
 import Pagination from '../Pagination/Pagination';
 import SearchBox from '../SearchBox/SearchBox';
 import NoteList from '../NoteList/NoteList';
 import Modal from '../Modal/Modal';
 import NoteForm from '../NoteForm/NoteForm';
 
-
 function App() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const queryClient = useQueryClient();
-
-  const {data} = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['notes', page, search], 
-    queryFn: () => fetchNotes({page, perPage: 12, search}),
+    queryFn: () => fetchNotes({ page, perPage: 12, search }),
     placeholderData: (previousData) => previousData,
   })
 
-  const createMutation = useMutation({
-    mutationFn: (newNote: CreateNoteParams) => createNote(newNote),
-    onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: ['notes']});
-      setIsModalOpen(false);
-    }
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteNote (id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: ['notes']});
-    }
-  })
-
-  const handleSearch = useDebouncedCallback((value) => {
+  const handleSearch = useDebouncedCallback((value: string) => {
     setSearch(value);
-    setPage(1)
-  } ,300);
-
-  const handleDelete = (id: string) => {
-    if(window.confirm("Delete this note?")){
-      deleteMutation.mutate(id);
-    }
-  }
+    setPage(1);
+  }, 300);
 
   return (
-    <>
     <div className={css.app}>
-	<header className={css.toolbar}>
-		{/* Компонент SearchBox */}
-    <SearchBox onChange={handleSearch}/>
-    {data && data.totalPages > 1 && (
-    <Pagination 
-      totalPages={data.totalPages} 
-      currentPage={page} 
-      onPageChange={setPage} 
-    />
-  )}
-		{/* Кнопка створення нотатки */}
-    <button className={css.button} onClick={() => setIsModalOpen(true)}>Create note +</button>
-  </header>
+      <header className={css.toolbar}>
+        <SearchBox onChange={handleSearch} />
+        
+        {data && data.totalPages > 1 && (
+          <Pagination 
+            totalPages={data.totalPages} 
+            currentPage={page} 
+            onPageChange={setPage} 
+          />
+        )}
+        
+        <button className={css.button} onClick={() => setIsModalOpen(true)}>
+          Create note +
+        </button>
+      </header>
 
-  <main>
+      <main>
+        {isLoading && <p className={css.status}>Завантаження нотаток...</p>}
+        {isError && <p className={css.error}>Сталася помилка при завантаженні нотаток.</p>}
+        
         {data && (
-          <NoteList notes={data.notes} onDelete={handleDelete} />
+          <NoteList notes={data.notes} />
         )}
       </main>
 
       {isModalOpen && (
         <Modal onClose={() => setIsModalOpen(false)}>
-          <NoteForm 
-            onSubmit={(values) => createMutation.mutate(values)} 
-            onCancel={() => setIsModalOpen(false)} 
-          />
+          <NoteForm onClose={() => setIsModalOpen(false)} />
         </Modal>
       )}
-</div>
-</>
+    </div>
   )
 }
 
-export default App
+export default App;

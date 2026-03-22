@@ -11,6 +11,14 @@ const modalRoot = document.querySelector("#modal-root") || document.body;
 
 function Modal({ children, onClose }: ModalProps) {
   useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === "Escape") onClose();
     };
@@ -19,7 +27,7 @@ function Modal({ children, onClose }: ModalProps) {
   }, [onClose]);
 
 
-const handleBackdropClick = (e: React.MouseEvent) => {
+const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
   if (e.target === e.currentTarget) onClose();
 }
 
